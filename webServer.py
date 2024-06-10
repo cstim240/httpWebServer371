@@ -4,7 +4,7 @@
 # causing the specified status code in the response.
 # NOT ALLOWED TO USE Python HTTP module or any other module that does the work for you.
 
-# Part 1 - Determine Requirements
+# Step 1 - Determine Requirements
 # 200 (OK) indicates the request was successful - payload returned. GET method is used to request the resource.
 # Methods used: (GET, POST, PUT, DELETE, OPTIONS, TRACE)
 # Part of msg causing 200: Request line, headers, body
@@ -32,6 +32,7 @@
 #Write down the specifications of the logic for the generation of each of these status codes,
 #and the HTTP request message you will use to test it.
 
+#Step 2 - Design the server
 from socket import * #this module provides access to the BSD socket interface
 import os #this module provides a portable way of using operating system dependent functionality
 
@@ -97,8 +98,13 @@ while True:
 
     #Try on a browser: http://192.168.1.70:12000/test.html for a 200 response which will load the test.html file
     #http://192.168.1.70:12000/userCreditCard.html for a 403 response which will display a Forbidden message
-    
 
+#Step 3: Performance
+#(a) Think about a web proxy server. What is different in request handling in a proxy server and a web server that hosts your files?
+#Based on the class' module 2 slides 29-34, a web proxy server/web cache is a server that sits between a client and a web server.
+#Cache acts as both client and server. It's the middle man which acs as a server for the client and a client for the server.
+# This reduces the response time for client requests and reduce traffic on an institution's access link. 
+# The proxy server stores copies of the resources that have been requested by clients.
 
 
 
