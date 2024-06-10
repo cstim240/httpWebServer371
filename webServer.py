@@ -33,14 +33,19 @@
 #and the HTTP request message you will use to test it.
 
 from socket import * #this module provides access to the BSD socket interface
+import os #this module provides a portable way of using operating system dependent functionality
 
 serverName = 'localhost' #server name
 serverPort = 12000 #server port
 
 serverSocket = socket(AF_INET, SOCK_STREAM) #create a socket object
-serverSocket.bind((gethostname(), serverPort)) #bind the socket to the host and port
-serverSocket.listen(1) #listen for incoming connections, the 1 is the maximum number of queued connections 
+#serverSocket.bind((gethostname(), serverPort)) #bind the socket to the host and port
+serverSocket.bind(('192.168.1.70', serverPort))
+serverSocket.listen(5) #listen for incoming connections, the 1 is the maximum number of queued connections 
 print("The server is ready to receive") #print a message to the console
+print("Host name:" + gethostname())
+valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'TRACE'] #list of valid methods
+last_modified_times = {}
 
 while True:
     clientsocket, address = serverSocket.accept() #accept the connection, tuple unpacking is used to assign different variables
@@ -52,15 +57,50 @@ while True:
     request_line = message.split('\n')[0] #split the message by the carriage return and newline characters
     request_method, path, version = request_line.split() #split the request line by the space character
 
-    if request_method == 'GET':
+    if request_method not in valid_methods:
+        response = 'HTTP/1.1 400 Bad Request\n\n' #create response message for 400 status code
+        clientsocket.send(response.encode('utf-8')) #send the response to the client
+    elif request_method == 'GET':
         if path == '/userCreditCard.html':
-            response = 'HTTP/1.1 403 Forbidden\n\nAccess to this resource is forbidden'
-            clientsocket.send(response.encode('utf-8')) #send the response to the client
-            print('Forbidden access to userCreditCard.html') #handle the request for userCreditCard.html
+            response = 'HTTP/1.1 403 Forbidden\n\n'
+            clientsocket.send(response.encode('utf-8'))
         elif path == '/test.html':
-            print('Received request for test.html') #handle the request for test.html
-        else: 
-            print('Received request for another file') #handle other paths
+            last_modified = os.path.getmtime('test.html')
+            #returns the time of last modification of the file specified in the path. https://docs.python.org/3/library/os.path.html#module-os.path
+
+            # if the path is in the dictionary and the last modified time is the same as the last modified time of the file
+            if path in last_modified_times and last_modified_times[path] == last_modified:
+                response = 'HTTP/1.1 304 Not Modified\n\n'
+            else: 
+                with open('test.html', 'r') as file: #open the file in read mode
+                    file_content = file.read() #read the content of the file
+                response = 'HTTP/1.1 200 OK\n\n' + file_content #create response message for 200 status code
+                last_modified_times[path] = last_modified
+            clientsocket.send(response.encode('utf-8'))
+        else:
+            response = 'HTTP/1.1 404 Not Found\n\n'
+            clientsocket.send(response.encode('utf-8'))
+
+    clientsocket.close() #close the connection
+
+
+    #use the commands below to run the server
+    #python3 webServer.py
+
+    #use the commands below to test the server on a different terminal
+    #curl -i http://localhost:12000/test.html for an OK response
+    #curl -i http://localhost:12000/test.html again for a Not Modified response
+    #curl -i http://localhost:12000/userCreditCard.html for a Forbidden response
+    #curl -i http://localhost:12000/invalid.html for a Not Found response
+    #curl -i -X INVALID http://localhost:12000/ for a Bad Request response, by default curl uses the GET method
+    # the -X flag is used to specify the method to be used
+
+    #Try on a browser: http://192.168.1.70:12000/test.html for a 200 response which will load the test.html file
+    #http://192.168.1.70:12000/userCreditCard.html for a 403 response which will display a Forbidden message
+    
+
+
+
 
 
 
