@@ -33,57 +33,67 @@
 #and the HTTP request message you will use to test it.
 
 #Step 2 - Design the server
-from socket import * #this module provides access to the BSD socket interface
-import os #this module provides a portable way of using operating system dependent functionality
+from socket import * 
+import os 
+import threading
 
-serverName = 'localhost' #server name
-serverPort = 12000 #server port
+serverPort = 12000  # Server port
 
-serverSocket = socket(AF_INET, SOCK_STREAM) #create a socket object
-#serverSocket.bind((gethostname(), serverPort)) #bind the socket to the host and port
-serverSocket.bind(('127.0.0.1', serverPort))
-serverSocket.listen(5) #listen for incoming connections, the 1 is the maximum number of queued connections 
-print("The server is ready to receive") #print a message to the console
+serverSocket = socket(AF_INET, SOCK_STREAM)  # Create a socket object
+serverSocket.bind(('127.0.0.1', serverPort))  # Bind the socket to the host and port
+serverSocket.listen(5)  # Listen for incoming connections, the 5 is the maximum number of queued connections
+print("The server is ready to receive")  # Print a message to the console
 print("Host name:" + gethostname())
-valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'TRACE'] #list of valid methods
+valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'TRACE']  # List of valid methods
 last_modified_times = {}
 
+
+# Function to handle client requests
+def handle_client(clientsocket):
+    try:
+        message = clientsocket.recv(2048).decode('utf-8')  # Receive the message from the client, decode it from bytes to a string
+        print("From server:", message)  # Print the message to the console
+
+        request_line = message.split('\n')[0]  # Split the message by the newline character
+        request_method, path, version = request_line.split()  # Split the request line by the space character
+
+        if request_method not in valid_methods:
+            response = 'HTTP/1.1 400 Bad Request\n\n'  # Create response message for 400 status code
+            clientsocket.send(response.encode('utf-8'))  # Send the response to the client
+        elif request_method == 'GET':
+            if path == '/userCreditCard.html':
+                response = 'HTTP/1.1 403 Forbidden\n\n'
+                clientsocket.send(response.encode('utf-8'))
+            elif path == '/test.html':
+                last_modified = os.path.getmtime('test.html')
+                # Returns the time of last modification of the file specified in the path
+
+                # If the path is in the dictionary and the last modified time is the same as the last modified time of the file
+                if path in last_modified_times and last_modified_times[path] == last_modified:
+                    response = 'HTTP/1.1 304 Not Modified\n\n'
+                else:
+                    with open('test.html', 'r') as file:  # Open the file in read mode
+                        file_content = file.read()  # Read the content of the file
+                    response = 'HTTP/1.1 200 OK\n\n' + file_content  # Create response message for 200 status code
+                    last_modified_times[path] = last_modified
+                clientsocket.send(response.encode('utf-8'))
+            else:
+                response = 'HTTP/1.1 404 Not Found\n\n'
+                clientsocket.send(response.encode('utf-8'))
+
+        clientsocket.close() # Close the socket after uses
+    except Exception as e:
+        print(f"Error: {e}")
+        response = 'HTTP/1.1 500 Internal Server Error\n\n'
+        clientsocket.send(response.encode('utf-8'))
+        clientsocket.close()  # Ensure the connection is closed in case of an error
+
+
 while True:
-    clientsocket, address = serverSocket.accept() #accept the connection, tuple unpacking is used to assign different variables
-    #to the different parts of the tuple, in this case the accept method returns a tuple with the client socket and the address
-    message = clientsocket.recv(2048).decode('utf-8') #receive the message from the client, decode it from bytes to a string
-    #the input parameter of recv specifies the maximum amount of data to be received at once, in this case 2048 bytes
-    print("From server:", message) #print the message to the console
-
-    request_line = message.split('\n')[0] #split the message by the carriage return and newline characters
-    request_method, path, version = request_line.split() #split the request line by the space character
-
-    if request_method not in valid_methods:
-        response = 'HTTP/1.1 400 Bad Request\n\n' #create response message for 400 status code
-        clientsocket.send(response.encode('utf-8')) #send the response to the client
-    elif request_method == 'GET':
-        if path == '/userCreditCard.html':
-            response = 'HTTP/1.1 403 Forbidden\n\n'
-            clientsocket.send(response.encode('utf-8'))
-        elif path == '/test.html':
-            last_modified = os.path.getmtime('test.html')
-            #returns the time of last modification of the file specified in the path. https://docs.python.org/3/library/os.path.html#module-os.path
-
-            # if the path is in the dictionary and the last modified time is the same as the last modified time of the file
-            if path in last_modified_times and last_modified_times[path] == last_modified:
-                response = 'HTTP/1.1 304 Not Modified\n\n'
-            else: 
-                with open('test.html', 'r') as file: #open the file in read mode
-                    file_content = file.read() #read the content of the file
-                response = 'HTTP/1.1 200 OK\n\n' + file_content #create response message for 200 status code
-                last_modified_times[path] = last_modified
-            clientsocket.send(response.encode('utf-8'))
-        else:
-            response = 'HTTP/1.1 404 Not Found\n\n'
-            clientsocket.send(response.encode('utf-8'))
-
-    clientsocket.close() #close the connection
-
+    clientsocket, address = serverSocket.accept()
+    # Create a new thread to handle the client request, same as webCacheServer
+    client_thread = threading.Thread(target=handle_client, args=(clientsocket,))
+    client_thread.start()
 
     #use the commands below to run the server
     #python3 webServer.py
@@ -107,6 +117,7 @@ while True:
 # The proxy server stores copies of the resources that have been requested by clients.
 
 
-
-
+#Step 4
+# With multithreading, the server can handle multiple request concurrently
+# reducing the likelihood of HOL blocking.
 
