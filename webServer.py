@@ -41,7 +41,7 @@ serverPort = 12000 #server port
 
 serverSocket = socket(AF_INET, SOCK_STREAM) #create a socket object
 #serverSocket.bind((gethostname(), serverPort)) #bind the socket to the host and port
-serverSocket.bind(('192.168.1.70', serverPort))
+serverSocket.bind(('127.0.0.1', serverPort))
 serverSocket.listen(5) #listen for incoming connections, the 1 is the maximum number of queued connections 
 print("The server is ready to receive") #print a message to the console
 print("Host name:" + gethostname())

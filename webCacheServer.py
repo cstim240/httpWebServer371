@@ -1,32 +1,57 @@
+# This implementation use multi-threading to handle multiple client
+# requests in parallel. This is achieved by creating a new thread
+# for each incoming client connection.
+
 import socket
+import threading
 
-cacheSocket = socket(socket.AF_INET, socket.SOCK_STREAM) #create a socket object
-cachePort = 12001 #server port
+proxyHost = '127.0.0.1'
+proxyPort = 8081
 
-server_address = ('localhost', cachePort)
-cacheSocket.bind(server_address)
+# Function to handle incoming proxy requests
+def handle_proxy_request(client_socket):
+    # Receive
+    request = client_socket.recv(2048).decode()
+    print("Received request at proxy:")
+    print(request)
 
-cacheSocket.listen(5) #listen for incoming connections, the 1 is the maximum number of queued connections
-print("The cache server is ready to receive")
+    try:
+        # headers = request.split('\n')
+        # method, path, version = headers[0].split()
 
-cache = {} #dictionary to store the cache
+        # Create a new socket to connect to the actual server
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.connect(('127.0.0.1', 12000))  # Connect to the actual web server
+        server_socket.sendall(request.encode())  # Forward the client's request to the web server
 
-while True: 
-    print("Waiting for incoming connection")
-    connection, client_address = cacheSocket.accept() #accept the connection, tuple unpacking is used to assign different variables
+        # Receive the response
+        response = server_socket.recv(4096)
+        server_socket.close() 
 
-    try: 
-        print("Connection from", client_address)
+        # Send the response back to the client
+        client_socket.sendall(response)
+    except Exception as e:
+        # If an error occurs, print it and send an internal server error response to the client
+        print(f"Error: {e}")
+        response = 'HTTP/1.1 500 Internal Server Error\n\n'
+        client_socket.send(response.encode())
+    
+    # Close the client socket
+    client_socket.close()
 
-        #receive the request, send response
-        while True: 
-            data = connection.recv(2048)
-            print("Received: ", data)
-            if data: 
-                print("Sending data back to the client")
-                connection.sendall(data)
-            else: 
-                print("No more data from", client_address)
-                break
-    finally:
-        connection.close()
+# Start the proxy server
+def start_proxy():
+    # Create a socket for the proxy server
+    proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    proxy_socket.bind((proxyHost, proxyPort))
+    proxy_socket.listen(5)  
+    print(f"Proxy server started at {proxyHost}:{proxyPort}")
+
+    while True:
+        client_socket, addr = proxy_socket.accept()  # Accept a connection from a client
+        # Create a new thread to handle the client's request
+        client_handler = threading.Thread(target=handle_proxy_request, args=(client_socket,))
+        client_handler.start()
+
+if __name__ == "__main__":
+    start_proxy()
