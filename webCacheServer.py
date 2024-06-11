@@ -16,9 +16,6 @@ def handle_proxy_request(client_socket):
     print(request)
 
     try:
-        # headers = request.split('\n')
-        # method, path, version = headers[0].split()
-
         # Create a new socket to connect to the actual server
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.connect(('127.0.0.1', 12000))  # Connect to the actual web server
