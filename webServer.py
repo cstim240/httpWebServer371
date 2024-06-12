@@ -9,30 +9,30 @@
 # Methods used: (GET, POST, PUT, DELETE, OPTIONS, TRACE)
 # Part of msg causing 200: Request line, headers, body
 
-#304 (Not Modified) indicates the client has the response in its cache. Indicates a conditional GET or HEAD request 
+# 304 (Not Modified) indicates the client has the response in its cache. Indicates a conditional GET or HEAD request 
 # has been received, would've resulted in 200 response if not for the fact that the condition evaluated to false.
 # no needs for a server to transfer a representation of the target resource because the client already has a valid representation.
 # Methods used: (GET, HEAD)
 # Part of msg causing 304: cache-control, conttent-location, date, etag, expires, and vary are some of the headers that can cause 304
 
-#400(Bad Request) indicates the server cannot/will not process request due to client error.
+# 400(Bad Request) indicates the server cannot/will not process request due to client error.
 # error could be malformed request syntax, invalid request message framing, depetive request routing
 # Methods used: (GET, POST, PUT, DELETE, OPTIONS, TRACE)
 # Part of msg causing 400: Request line, headers, body
 
-#403(Forbidden) indicates the server understood request but refuses to authorize it. 
+# 403(Forbidden) indicates the server understood request but refuses to authorize it. 
 # client does not have permission to access the requested resource.
 # Methods used: (GET, POST, PUT, DELETE, OPTIONS, TRACE)
 # Part of msg causing 403: Request line, headers, body
 
-#404(Not Found) indicates the server can't find the requested resource
+# 404(Not Found) indicates the server can't find the requested resource
 # Methods used: (GET, POST, PUT, DELETE, OPTIONS, TRACE)
 # Part of msg causing 404: Request line, headers, body
 
-#Write down the specifications of the logic for the generation of each of these status codes,
-#and the HTTP request message you will use to test it.
+# Write down the specifications of the logic for the generation of each of these status codes,
+# and the HTTP request message you will use to test it.
 
-#Step 2 - Design the server
+# Step 2 - Design the server
 from socket import * 
 import os 
 import threading
@@ -81,12 +81,12 @@ def handle_client(clientsocket):
                 response = 'HTTP/1.1 404 Not Found\n\n'
                 clientsocket.send(response.encode('utf-8'))
 
-        clientsocket.close() # Close the socket after uses
     except Exception as e:
         print(f"Error: {e}")
         response = 'HTTP/1.1 500 Internal Server Error\n\n'
         clientsocket.send(response.encode('utf-8'))
-        clientsocket.close()  # Ensure the connection is closed in case of an error
+    
+    clientsocket.close()  # Close the client socket
 
 
 while True:
@@ -95,29 +95,29 @@ while True:
     client_thread = threading.Thread(target=handle_client, args=(clientsocket,))
     client_thread.start()
 
-    #use the commands below to run the server
-    #python3 webServer.py
+    # use the commands below to run the server
+    # python3 webServer.py
 
-    #use the commands below to test the server on a different terminal
-    #curl -i http://localhost:12000/test.html for an OK response
-    #curl -i http://localhost:12000/test.html again for a Not Modified response
-    #curl -i http://localhost:12000/userCreditCard.html for a Forbidden response
-    #curl -i http://localhost:12000/invalid.html for a Not Found response
-    #curl -i -X INVALID http://localhost:12000/ for a Bad Request response, by default curl uses the GET method
+    # use the commands below to test the server on a different terminal
+    # curl -i http://127.0.0.1:12000/test.html for an OK response
+    # curl -i http://127.0.0.1:12000/test.html again for a Not Modified response
+    # curl -i http://127.0.0.1:12000/userCreditCard.html for a Forbidden response
+    # curl -i http://127.0.0.1:12000/invalid.html for a Not Found response
+    # curl -i -X INVALID http://127.0.0.1:12000/ for a Bad Request response, by default curl uses the GET method
     # the -X flag is used to specify the method to be used
 
-    #Try on a browser: http://192.168.1.70:12000/test.html for a 200 response which will load the test.html file
-    #http://192.168.1.70:12000/userCreditCard.html for a 403 response which will display a Forbidden message
+    # Try on a browser: http://127.0.0.1:12000/test.html for a 200 response which will load the test.html file
+    # http://127.0.0.1:12000/userCreditCard.html for a 403 response which will display a Forbidden message
 
-#Step 3: Performance
-#(a) Think about a web proxy server. What is different in request handling in a proxy server and a web server that hosts your files?
-#Based on the class' module 2 slides 29-34, a web proxy server/web cache is a server that sits between a client and a web server.
-#Cache acts as both client and server. It's the middle man which acs as a server for the client and a client for the server.
+# Step 3: Performance
+# (a) Think about a web proxy server. What is different in request handling in a proxy server and a web server that hosts your files?
+# Based on the class' module 2 slides 29-34, a web proxy server/web cache is a server that sits between a client and a web server.
+# Cache acts as both client and server. It's the middle man which acs as a server for the client and a client for the server.
 # This reduces the response time for client requests and reduce traffic on an institution's access link. 
 # The proxy server stores copies of the resources that have been requested by clients.
 
 
-#Step 4
+# Step 4
 # With multithreading, the server can handle multiple request concurrently
 # reducing the likelihood of HOL blocking.
 

@@ -44,6 +44,7 @@ def start_proxy():
     proxy_socket.listen(5)  
     print(f"Proxy server started at {proxyHost}:{proxyPort}")
 
+    #this allows the proxy server to handle multiple client requests in parallel 
     while True:
         client_socket, addr = proxy_socket.accept()  # Accept a connection from a client
         # Create a new thread to handle the client's request
