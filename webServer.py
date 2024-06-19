@@ -33,23 +33,25 @@
 # and the HTTP request message you will use to test it.
 
 # Step 2 - Design the server
-from socket import * 
-import os 
-import threading
+from socket import *
+import os
+import heapq
+import time
 
 serverPort = 12000  # Server port
 
 serverSocket = socket(AF_INET, SOCK_STREAM)  # Create a socket object
 serverSocket.bind(('127.0.0.1', serverPort))  # Bind the socket to the host and port
-serverSocket.listen(5)  # Listen for incoming connections, the 5 is the maximum number of queued connections
+serverSocket.listen(1)  # Listen for incoming connections (single-threaded)
 print("The server is ready to receive")  # Print a message to the console
-print("Host name:" + gethostname())
+
 valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'TRACE']  # List of valid methods
 last_modified_times = {}
+priority_queue = []  # Min-heap for priority queue
+request_counter = 0  # To keep the order of requests with the same priority
 
-
-# Function to handle client requests
-def handle_client(clientsocket):
+def handle_request(priority, request):
+    clientsocket, address = request
     try:
         message = clientsocket.recv(2048).decode('utf-8')  # Receive the message from the client, decode it from bytes to a string
         print("From server:", message)  # Print the message to the console
@@ -65,35 +67,48 @@ def handle_client(clientsocket):
                 response = 'HTTP/1.1 403 Forbidden\n\n'
                 clientsocket.send(response.encode('utf-8'))
             elif path == '/test.html':
-                last_modified = os.path.getmtime('test.html')
-                # Returns the time of last modification of the file specified in the path
-
-                # If the path is in the dictionary and the last modified time is the same as the last modified time of the file
-                if path in last_modified_times and last_modified_times[path] == last_modified:
-                    response = 'HTTP/1.1 304 Not Modified\n\n'
+                if os.path.exists('test.html'):
+                    last_modified = os.path.getmtime('test.html')
+                    if path in last_modified_times and last_modified_times[path] == last_modified:
+                        response = 'HTTP/1.1 304 Not Modified\n\n'
+                    else:
+                        with open('test.html', 'r') as file:  # Open the file in read mode
+                            file_content = file.read()  # Read the content of the file
+                        response = 'HTTP/1.1 200 OK\n\n' + file_content  # Create response message for 200 status code
+                        last_modified_times[path] = last_modified
+                    clientsocket.send(response.encode('utf-8'))
                 else:
-                    with open('test.html', 'r') as file:  # Open the file in read mode
-                        file_content = file.read()  # Read the content of the file
-                    response = 'HTTP/1.1 200 OK\n\n' + file_content  # Create response message for 200 status code
-                    last_modified_times[path] = last_modified
-                clientsocket.send(response.encode('utf-8'))
+                    response = 'HTTP/1.1 404 Not Found\n\n'
+                    clientsocket.send(response.encode('utf-8'))
             else:
                 response = 'HTTP/1.1 404 Not Found\n\n'
                 clientsocket.send(response.encode('utf-8'))
+        else:
+            response = 'HTTP/1.1 405 Method Not Allowed\n\n'
+            clientsocket.send(response.encode('utf-8'))
 
+        clientsocket.close()  # Close the socket after use
     except Exception as e:
         print(f"Error: {e}")
         response = 'HTTP/1.1 500 Internal Server Error\n\n'
         clientsocket.send(response.encode('utf-8'))
-    
-    clientsocket.close()  # Close the client socket
+        clientsocket.close()  # Ensure the connection is closed in case of an error
 
+def main():
+    global request_counter
+    while True:
+        clientsocket, address = serverSocket.accept()
+        priority = time.time()  # Use timestamp as priority for simplicity
+        heapq.heappush(priority_queue, (priority, request_counter, (clientsocket, address)))
+        request_counter += 1
+        
+        while priority_queue:
+            _, _, request = heapq.heappop(priority_queue)
+            handle_request(priority, request)
 
-while True:
-    clientsocket, address = serverSocket.accept()
-    # Create a new thread to handle the client request, same as webCacheServer
-    client_thread = threading.Thread(target=handle_client, args=(clientsocket,))
-    client_thread.start()
+if __name__ == "__main__":
+    main()
+
 
     # use the commands below to run the server
     # python3 webServer.py
@@ -118,6 +133,5 @@ while True:
 
 
 # Step 4
-# With multithreading, the server can handle multiple request concurrently
-# reducing the likelihood of HOL blocking.
-
+# By assigning priority to each connections base on time stamp
+# With that we push/pop base on the priority
